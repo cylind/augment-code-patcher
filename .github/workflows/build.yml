@@ -1,0 +1,119 @@
+# .github/workflows/build.yml
+
+name: Build Patched Augment Code Extension
+
+on:
+  # 允许你手动在 GitHub Actions 页面点击 "Run workflow" 按钮来触发
+  workflow_dispatch:
+
+  # 每周一早上 8 点 (UTC) 自动运行，检查是否有新版本
+  schedule:
+    - cron: '0 8 * * 1'
+
+  # 当你的补丁脚本或工作流文件本身被更新时，也自动运行
+  push:
+    paths:
+      - 'v2.5-precise-interceptor.js'
+      - '.github/workflows/**'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 授予工作流向仓库创建 Release 的权限
+
+    steps:
+      # 步骤 1: 检出你的代码
+      # 目的是获取仓库中的去风控脚本 v2.5-precise-interceptor.js
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 步骤 2: 设置 Node.js 环境
+      # 打包 VS Code 插件需要 Node.js 和 npm
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 步骤 3: 安装必要的工具
+      # vsce: 微软官方的 VS Code 插件打包工具
+      # unzip: 用于解压 .vsix 文件 (它本身是个zip包)
+      # jq: 一个好用的命令行 JSON 解析工具，用于读取版本号
+      - name: Install dependencies
+        run: |
+          npm install -g @vscode/vsce
+          sudo apt-get update && sudo apt-get install -y unzip jq
+
+      # 步骤 4: 下载最新的 Augment Code VSIX 插件
+      # 已根据你的要求更新 PUBLISHER 和 EXTENSION_NAME
+      - name: Download Latest VSIX
+        run: |
+          PUBLISHER="Augment"
+          EXTENSION_NAME="vscode-augment"
+          VSIX_URL="https://marketplace.visualstudio.com/_apis/public/gallery/publishers/${PUBLISHER}/vsextensions/${EXTENSION_NAME}/latest/vspackage"
+          curl -L -o original.vsix "${VSIX_URL}"
+          echo "VSIX downloaded successfully as original.vsix"
+
+      # 步骤 5: 解包并应用补丁
+      - name: Unpack and Patch VSIX
+        run: |
+          # 解压 VSIX 到一个临时目录
+          unzip original.vsix -d unpacked_ext
+          
+          # 核心补丁步骤：将你的脚本内容添加到原始 extension.js 的开头
+          # 1. 将原始文件重命名为备份
+          mv unpacked_ext/extension/extension.js unpacked_ext/extension/extension.original.js
+          # 2. 使用 cat 命令将你的脚本和原始脚本拼接成新的 extension.js
+          cat v2.5-precise-interceptor.js unpacked_ext/extension/extension.original.js > unpacked_ext/extension/extension.js
+          
+          echo "Patch applied successfully."
+
+      # 步骤 6: 安装插件依赖并创建 .vscodeignore
+      - name: Install extension dependencies
+        working-directory: ./unpacked_ext/extension
+        run: |
+          npm install
+          # 创建 .vscodeignore 文件，确保 node_modules 不会被打包进去
+          echo "node_modules/" > .vscodeignore
+          echo "Dependencies installed and .vscodeignore created."
+
+      # 步骤 7: 从插件的 package.json 中获取版本号
+      # 将版本号设置为环境变量，供后续步骤使用
+      - name: Get extension version
+        id: get_version
+        run: |
+          VERSION=$(jq -r .version unpacked_ext/extension/package.json)
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "Discovered extension version: ${VERSION}"
+
+      # 步骤 8: 重新打包成新的 VSIX 文件（使用包含版本号的文件名）
+      # 已根据你的要求更新输出文件名格式
+      - name: Repackage Patched VSIX
+        id: repackage
+        run: |
+          PATCHED_VSIX_NAME="augment.vscode-augment-${{ env.VERSION }}-patched.vsix"
+          echo "PATCHED_VSIX_NAME=${PATCHED_VSIX_NAME}" >> $GITHUB_ENV
+          vsce package --out "${PATCHED_VSIX_NAME}" --base unpacked_ext/extension/
+          echo "Patched VSIX created: ${PATCHED_VSIX_NAME}"
+          ls -l *.vsix
+
+      # 步骤 9: 创建 GitHub Release 并上传打包好的 VSIX
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # 使用插件版本号创建一个唯一的 Git 标签
+          tag_name: "v${{ env.VERSION }}-patched"
+          name: "Patched Augment v${{ env.VERSION }}"
+          body: |
+            This is an automated build of the Augment extension, patched with the v2.5 anti-telemetry script.
+            
+            - Original Extension Version: **${{ env.VERSION }}**
+            - Patch Script: v2.5-precise-interceptor.js
+            
+            Install the `.vsix` file below manually in VS Code.
+          # 将打包好的文件作为附件上传 (使用动态文件名)
+          files: "${{ env.PATCHED_VSIX_NAME }}"
+          # 标记为预发布版本，因为这是非官方构建
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
