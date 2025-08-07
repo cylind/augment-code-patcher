@@ -51,7 +51,7 @@ jobs:
           PUBLISHER="augment"
           EXTENSION_NAME="vscode-augment"
           VSIX_URL="https://marketplace.visualstudio.com/_apis/public/gallery/publishers/${PUBLISHER}/vsextensions/${EXTENSION_NAME}/latest/vspackage"
-          curl -L -o original.vsix "${VSIX_URL}"
+          wget -O original.vsix "${VSIX_URL}"
           echo "VSIX downloaded successfully as original.vsix"
 
       # 步骤 5: 解包并应用补丁
