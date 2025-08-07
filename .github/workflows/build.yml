@@ -48,7 +48,7 @@ jobs:
       # 已根据你的要求更新 PUBLISHER 和 EXTENSION_NAME
       - name: Download Latest VSIX
         run: |
-          PUBLISHER="Augment"
+          PUBLISHER="augment"
           EXTENSION_NAME="vscode-augment"
           VSIX_URL="https://marketplace.visualstudio.com/_apis/public/gallery/publishers/${PUBLISHER}/vsextensions/${EXTENSION_NAME}/latest/vspackage"
           curl -L -o original.vsix "${VSIX_URL}"
