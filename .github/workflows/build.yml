@@ -6,9 +6,9 @@ on:
   # 允许你手动在 GitHub Actions 页面点击 "Run workflow" 按钮来触发
   workflow_dispatch:
 
-  # 每周一早上 8 点 (UTC) 自动运行，检查是否有新版本
+  # 每天早上 8 点 (UTC) 自动运行，检查是否有新版本
   schedule:
-    - cron: '0 8 * * 1'
+    - cron: '0 8 * * *'
 
   # 当你的补丁脚本或工作流文件本身被更新时，也自动运行
   push:
@@ -28,23 +28,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 步骤 2: 设置 Node.js 环境
-      # 打包 VS Code 插件需要 Node.js 和 npm
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      # 步骤 3: 安装必要的工具
-      # vsce: 微软官方的 VS Code 插件打包工具
-      # unzip: 用于解压 .vsix 文件 (它本身是个zip包)
-      # jq: 一个好用的命令行 JSON 解析工具，用于读取版本号
-      - name: Install dependencies
-        run: |
-          npm install -g @vscode/vsce
-          sudo apt-get update && sudo apt-get install -y unzip jq
-
-      # 步骤 4: 下载最新的 Augment Code VSIX 插件
+      # 步骤 2: 下载最新的 Augment Code VSIX 插件
       # 已根据你的要求更新 PUBLISHER 和 EXTENSION_NAME
       - name: Download Latest VSIX
         run: |
@@ -58,7 +42,7 @@ jobs:
           echo "Verifying downloaded file type:"
           file original.vsix
 
-      # 步骤 5: 解包并应用补丁
+      # 步骤 3: 解包并应用补丁
       - name: Unpack and Patch VSIX
         run: |
           # 解压 VSIX 到一个临时目录
@@ -72,16 +56,7 @@ jobs:
           
           echo "Patch applied successfully."
 
-      # 步骤 6: 安装插件依赖并创建 .vscodeignore
-      - name: Install extension dependencies
-        working-directory: ./unpacked_ext/extension
-        run: |
-          npm install
-          # 创建 .vscodeignore 文件，确保 node_modules 不会被打包进去
-          echo "node_modules/" > .vscodeignore
-          echo "Dependencies installed and .vscodeignore created."
-
-      # 步骤 7: 从插件的 package.json 中获取版本号
+      # 步骤 4: 从插件的 package.json 中获取版本号
       # 将版本号设置为环境变量，供后续步骤使用
       - name: Get extension version
         id: get_version
@@ -90,8 +65,58 @@ jobs:
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo "Discovered extension version: ${VERSION}"
 
-      # 步骤 8: 重新打包成新的 VSIX 文件（使用包含版本号的文件名）
+      # 步骤 5: 检查版本是否已存在
+      # 如果已存在相同版本的 release，则跳过后续构建步骤
+      - name: Check if version already exists
+        id: version_check
+        run: |
+          TAG_NAME="v${{ env.VERSION }}-patched"
+          if git tag -l | grep -q "^${TAG_NAME}$"; then
+            echo "Tag ${TAG_NAME} already exists, skipping build"
+            echo "SKIP_BUILD=true" >> $GITHUB_ENV
+            echo "skip_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "New version detected: ${{ env.VERSION }}"
+            echo "SKIP_BUILD=false" >> $GITHUB_ENV
+            echo "skip_build=false" >> $GITHUB_OUTPUT
+          fi
+
+      # 步骤 5.1: 显示跳过构建的信息（仅在跳过时执行）
+      - name: Skip build notification
+        if: steps.version_check.outputs.skip_build == 'true'
+        run: |
+          echo "✅ Version ${{ env.VERSION }} already exists as release v${{ env.VERSION }}-patched"
+          echo "⏭️  Skipping build process to save time and resources"
+          echo "🔄 If you want to rebuild, delete the existing tag and release first"
+
+      # 步骤 6: 设置 Node.js 环境（仅在需要构建时执行）
+      # 打包 VS Code 插件需要 Node.js 和 npm
+      - name: Setup Node.js
+        if: steps.version_check.outputs.skip_build == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 步骤 7: 安装必要的工具（仅在需要构建时执行）
+      # vsce: 微软官方的 VS Code 插件打包工具
+      - name: Install dependencies
+        if: steps.version_check.outputs.skip_build == 'false'
+        run: |
+          npm install -g @vscode/vsce
+
+      # 步骤 8: 安装插件依赖并创建 .vscodeignore（仅在需要构建时执行）
+      - name: Install extension dependencies
+        if: steps.version_check.outputs.skip_build == 'false'
+        working-directory: ./unpacked_ext/extension
+        run: |
+          npm install
+          # 创建 .vscodeignore 文件，确保 node_modules 不会被打包进去
+          echo "node_modules/" > .vscodeignore
+          echo "Dependencies installed and .vscodeignore created."
+
+      # 步骤 9: 重新打包成新的 VSIX 文件（使用包含版本号的文件名）
       - name: Repackage Patched VSIX
+        if: steps.version_check.outputs.skip_build == 'false'
         id: repackage
         run: |
           PATCHED_VSIX_NAME="augment.vscode-augment-${{ env.VERSION }}-patched.vsix"
@@ -101,8 +126,9 @@ jobs:
           echo "Patched VSIX created: ${PATCHED_VSIX_NAME}"
           ls -l ../../*.vsix
 
-      # 步骤 9: 创建 GitHub Release 并上传打包好的 VSIX
+      # 步骤 10: 创建 GitHub Release 并上传打包好的 VSIX
       - name: Create GitHub Release
+        if: steps.version_check.outputs.skip_build == 'false'
         uses: softprops/action-gh-release@v2
         with:
           # 使用插件版本号创建一个唯一的 Git 标签
