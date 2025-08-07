@@ -96,10 +96,10 @@ jobs:
         run: |
           PATCHED_VSIX_NAME="augment.vscode-augment-${{ env.VERSION }}-patched.vsix"
           echo "PATCHED_VSIX_NAME=${PATCHED_VSIX_NAME}" >> $GITHUB_ENV
-          cd unpacked_ext
-          vsce package --out ../${PATCHED_VSIX_NAME}
+          cd unpacked_ext/extension
+          vsce package --out ../../${PATCHED_VSIX_NAME}
           echo "Patched VSIX created: ${PATCHED_VSIX_NAME}"
-          ls -l *.vsix
+          ls -l ../../*.vsix
 
       # 步骤 9: 创建 GitHub Release 并上传打包好的 VSIX
       - name: Create GitHub Release
