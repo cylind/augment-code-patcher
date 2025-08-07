@@ -27,7 +27,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-tags: true
+          fetch-depth: 0  # 获取完整历史，包括所有 tags
 
       # 步骤 2: 下载最新的 Augment Code VSIX 插件
       - name: Download Latest VSIX
