@@ -46,7 +46,7 @@ jobs:
       - name: Unpack and Patch VSIX
         run: |
           # 解压 VSIX 到一个临时目录
-          unzip original.vsix -d unpacked_ext
+          unzip -q original.vsix -d unpacked_ext
           
           # 核心补丁步骤：将你的脚本内容添加到原始 extension.js 的开头
           # 1. 将原始文件重命名为备份
@@ -70,24 +70,12 @@ jobs:
       - name: Check if version already exists
         id: version_check
         run: |
-          echo "🔍 Debug: Checking version comparison..."
-          echo "📦 Official plugin version: ${{ env.VERSION }}"
-
           TAG_NAME="v${{ env.VERSION }}-patched"
-          echo "🏷️  Expected tag name: ${TAG_NAME}"
-
-          echo "📋 All existing tags in repository:"
-          git tag -l
-
-          echo "🔎 Searching for exact tag match..."
           if git tag -l | grep -q "^${TAG_NAME}$"; then
-            echo "✅ Tag ${TAG_NAME} already exists, skipping build"
-            echo "SKIP_BUILD=true" >> $GITHUB_ENV
+            echo "Tag ${TAG_NAME} already exists, skipping build"
             echo "skip_build=true" >> $GITHUB_OUTPUT
           else
-            echo "🆕 New version detected: ${{ env.VERSION }}"
-            echo "📝 Tag ${TAG_NAME} does not exist, proceeding with build"
-            echo "SKIP_BUILD=false" >> $GITHUB_ENV
+            echo "New version ${{ env.VERSION }} detected, proceeding with build"
             echo "skip_build=false" >> $GITHUB_OUTPUT
           fi
 
@@ -95,9 +83,8 @@ jobs:
       - name: Skip build notification
         if: steps.version_check.outputs.skip_build == 'true'
         run: |
-          echo "✅ Version ${{ env.VERSION }} already exists as release v${{ env.VERSION }}-patched"
-          echo "⏭️  Skipping build process to save time and resources"
-          echo "🔄 If you want to rebuild, delete the existing tag and release first"
+          echo "✅ Version ${{ env.VERSION }} already exists, skipping build"
+          echo "� To rebuild: delete tag v${{ env.VERSION }}-patched and its release"
 
       # 步骤 6: 设置 Node.js 环境（仅在需要构建时执行）
       # 打包 VS Code 插件需要 Node.js 和 npm
