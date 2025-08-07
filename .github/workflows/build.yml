@@ -51,8 +51,12 @@ jobs:
           PUBLISHER="augment"
           EXTENSION_NAME="vscode-augment"
           VSIX_URL="https://marketplace.visualstudio.com/_apis/public/gallery/publishers/${PUBLISHER}/vsextensions/${EXTENSION_NAME}/latest/vspackage"
-          wget -O original.vsix "${VSIX_URL}"
-          echo "VSIX downloaded successfully as original.vsix"
+          # 使用 --compressed 标志让 curl 自动处理解压缩
+          curl -L --compressed -o original.vsix "${VSIX_URL}"
+          echo "VSIX downloaded and decompressed successfully."
+          # 增加验证步骤，确认文件现在是 Zip 格式
+          echo "Verifying downloaded file type:"
+          file original.vsix
 
       # 步骤 5: 解包并应用补丁
       - name: Unpack and Patch VSIX
@@ -113,7 +117,5 @@ jobs:
             Install the `.vsix` file below manually in VS Code.
           # 将打包好的文件作为附件上传 (使用动态文件名)
           files: "${{ env.PATCHED_VSIX_NAME }}"
-          # 标记为预发布版本，因为这是非官方构建
-          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
