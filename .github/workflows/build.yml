@@ -91,13 +91,13 @@ jobs:
           echo "Discovered extension version: ${VERSION}"
 
       # 步骤 8: 重新打包成新的 VSIX 文件（使用包含版本号的文件名）
-      # 已根据你的要求更新输出文件名格式
       - name: Repackage Patched VSIX
         id: repackage
         run: |
           PATCHED_VSIX_NAME="augment.vscode-augment-${{ env.VERSION }}-patched.vsix"
           echo "PATCHED_VSIX_NAME=${PATCHED_VSIX_NAME}" >> $GITHUB_ENV
-          vsce package --out "${PATCHED_VSIX_NAME}" --base unpacked_ext/extension/
+          cd unpacked_ext/original
+          vsce package --out ../../${PATCHED_VSIX_NAME}
           echo "Patched VSIX created: ${PATCHED_VSIX_NAME}"
           ls -l *.vsix
 
