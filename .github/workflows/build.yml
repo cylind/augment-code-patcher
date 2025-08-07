@@ -96,8 +96,8 @@ jobs:
         run: |
           PATCHED_VSIX_NAME="augment.vscode-augment-${{ env.VERSION }}-patched.vsix"
           echo "PATCHED_VSIX_NAME=${PATCHED_VSIX_NAME}" >> $GITHUB_ENV
-          cd unpacked_ext/original
-          vsce package --out ../../${PATCHED_VSIX_NAME}
+          cd unpacked_ext
+          vsce package --out ../${PATCHED_VSIX_NAME}
           echo "Patched VSIX created: ${PATCHED_VSIX_NAME}"
           ls -l *.vsix
 
