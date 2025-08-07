@@ -70,13 +70,23 @@ jobs:
       - name: Check if version already exists
         id: version_check
         run: |
+          echo "🔍 Debug: Checking version comparison..."
+          echo "📦 Official plugin version: ${{ env.VERSION }}"
+
           TAG_NAME="v${{ env.VERSION }}-patched"
+          echo "🏷️  Expected tag name: ${TAG_NAME}"
+
+          echo "📋 All existing tags in repository:"
+          git tag -l
+
+          echo "🔎 Searching for exact tag match..."
           if git tag -l | grep -q "^${TAG_NAME}$"; then
-            echo "Tag ${TAG_NAME} already exists, skipping build"
+            echo "✅ Tag ${TAG_NAME} already exists, skipping build"
             echo "SKIP_BUILD=true" >> $GITHUB_ENV
             echo "skip_build=true" >> $GITHUB_OUTPUT
           else
-            echo "New version detected: ${{ env.VERSION }}"
+            echo "🆕 New version detected: ${{ env.VERSION }}"
+            echo "📝 Tag ${TAG_NAME} does not exist, proceeding with build"
             echo "SKIP_BUILD=false" >> $GITHUB_ENV
             echo "skip_build=false" >> $GITHUB_OUTPUT
           fi
