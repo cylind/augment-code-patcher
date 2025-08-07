@@ -66,9 +66,9 @@ jobs:
           
           # 核心补丁步骤：将你的脚本内容添加到原始 extension.js 的开头
           # 1. 将原始文件重命名为备份
-          mv unpacked_ext/extension/extension.js unpacked_ext/extension/extension.original.js
+          mv unpacked_ext/extension/out/extension.js unpacked_ext/extension/out/extension.original.js
           # 2. 使用 cat 命令将你的脚本和原始脚本拼接成新的 extension.js
-          cat v2.5-precise-interceptor.js unpacked_ext/extension/extension.original.js > unpacked_ext/extension/extension.js
+          cat v2.5-precise-interceptor.js unpacked_ext/extension/out/extension.original.js > unpacked_ext/extension/out/extension.js
           
           echo "Patch applied successfully."
 
