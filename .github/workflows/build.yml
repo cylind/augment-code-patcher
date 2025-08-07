@@ -24,12 +24,12 @@ jobs:
 
     steps:
       # 步骤 1: 检出你的代码
-      # 目的是获取仓库中的去风控脚本 v2.5-precise-interceptor.js
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-tags: true
 
       # 步骤 2: 下载最新的 Augment Code VSIX 插件
-      # 已根据你的要求更新 PUBLISHER 和 EXTENSION_NAME
       - name: Download Latest VSIX
         run: |
           PUBLISHER="augment"
