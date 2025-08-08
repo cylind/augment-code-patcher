@@ -102,10 +102,11 @@ jobs:
           
           echo "Found main entry point at: $MAIN_JS_PATH"
           
-          # 对找到的入口文件应用补丁
-          mv "$MAIN_JS_PATH" "${MAIN_JS_PATH}.original"
-          cat ../../v2.5-precise-interceptor.js "${MAIN_JS_PATH}.original" > "$MAIN_JS_PATH"
-          echo "Patch applied successfully."
+          # 对找到的入口文件应用补丁（原地替换）
+          TEMP_FILE=$(mktemp)
+          cat ../../v2.5-precise-interceptor.js "$MAIN_JS_PATH" > "$TEMP_FILE"
+          mv "$TEMP_FILE" "$MAIN_JS_PATH"
+          echo "Patch applied successfully (in-place replacement)."
 
       - name: Repackage Patched VSIX
         if: steps.version_check.outputs.skip_build == 'false'
