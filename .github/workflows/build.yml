@@ -3,14 +3,9 @@
 name: Build Patched Augment Code Extension
 
 on:
-  # 允许你手动在 GitHub Actions 页面点击 "Run workflow" 按钮来触发
   workflow_dispatch:
-
-  # 每天早上 8 点 (UTC) 自动运行，检查是否有新版本
   schedule:
     - cron: '0 8 * * *'
-
-  # 当你的补丁脚本或工作流文件本身被更新时，也自动运行
   push:
     paths:
       - 'v2.5-precise-interceptor.js'
@@ -20,98 +15,98 @@ jobs:
   build-and-release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 授予工作流向仓库创建 Release 的权限
+      contents: write
 
     steps:
-      # 步骤 1: 检出你的代码
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整历史，包括所有 tags
+          fetch-depth: 0
 
-      # 步骤 2: 下载最新的 Augment Code VSIX 插件
       - name: Download Latest VSIX
         run: |
           PUBLISHER="augment"
           EXTENSION_NAME="vscode-augment"
           VSIX_URL="https://marketplace.visualstudio.com/_apis/public/gallery/publishers/${PUBLISHER}/vsextensions/${EXTENSION_NAME}/latest/vspackage"
-          # 使用 --compressed 标志让 curl 自动处理解压缩
           curl -L --compressed -o original.vsix "${VSIX_URL}"
-          echo "VSIX downloaded and decompressed successfully."
-          # 增加验证步骤，确认文件现在是 Zip 格式
-          echo "Verifying downloaded file type:"
-          file original.vsix
+          echo "VSIX downloaded successfully."
 
-      # 步骤 3: 解包并应用补丁
-      - name: Unpack and Patch VSIX
+      - name: Unpack VSIX
         run: |
-          # 解压 VSIX 到一个临时目录
           unzip -q original.vsix -d unpacked_ext
-          
-          # 核心补丁步骤：将你的脚本内容添加到原始 extension.js 的开头
-          # 1. 将原始文件重命名为备份
-          mv unpacked_ext/extension/out/extension.js unpacked_ext/extension/out/extension.original.js
-          # 2. 使用 cat 命令将你的脚本和原始脚本拼接成新的 extension.js
-          cat v2.5-precise-interceptor.js unpacked_ext/extension/out/extension.original.js > unpacked_ext/extension/out/extension.js
-          
-          echo "Patch applied successfully."
+          echo "VSIX unpacked successfully."
 
-      # 步骤 4: 从插件的 package.json 中获取版本号
-      # 将版本号设置为环境变量，供后续步骤使用
       - name: Get extension version
         id: get_version
         run: |
           VERSION=$(jq -r .version unpacked_ext/extension/package.json)
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo "Discovered extension version: ${VERSION}"
-
-      # 步骤 5: 检查版本是否已存在
-      # 如果已存在相同版本的 release，则跳过后续构建步骤
+      
       - name: Check if version already exists
         id: version_check
         run: |
           TAG_NAME="v${{ env.VERSION }}-patched"
           if git tag -l | grep -q "^${TAG_NAME}$"; then
-            echo "Tag ${TAG_NAME} already exists, skipping build"
+            echo "Tag ${TAG_NAME} already exists."
             echo "skip_build=true" >> $GITHUB_OUTPUT
           else
-            echo "New version ${{ env.VERSION }} detected, proceeding with build"
+            echo "New version ${{ env.VERSION }} detected."
             echo "skip_build=false" >> $GITHUB_OUTPUT
           fi
 
-      # 步骤 5.1: 显示跳过构建的信息（仅在跳过时执行）
       - name: Skip build notification
         if: steps.version_check.outputs.skip_build == 'true'
-        run: |
-          echo "✅ Version ${{ env.VERSION }} already exists, skipping build"
-          echo "� To rebuild: delete tag v${{ env.VERSION }}-patched and its release"
+        run: echo "✅ Version ${{ env.VERSION }} is already released. Skipping build."
 
-      # 步骤 6: 设置 Node.js 环境（仅在需要构建时执行）
-      # 打包 VS Code 插件需要 Node.js 和 npm
+      # --- Conditional build steps start here ---
+
       - name: Setup Node.js
         if: steps.version_check.outputs.skip_build == 'false'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # 步骤 7: 安装必要的工具（仅在需要构建时执行）
-      # vsce: 微软官方的 VS Code 插件打包工具
-      - name: Install dependencies
+      - name: Cache Node.js modules
         if: steps.version_check.outputs.skip_build == 'false'
-        run: |
-          npm install -g @vscode/vsce
+        id: cache-npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
-      # 步骤 8: 安装插件依赖并创建 .vscodeignore（仅在需要构建时执行）
-      - name: Install extension dependencies
+      # 终极优化：直接从 package.json 读取 main 入口文件并应用补丁
+      - name: Install dependencies and Patch
         if: steps.version_check.outputs.skip_build == 'false'
         working-directory: ./unpacked_ext/extension
         run: |
+          echo "--- Installing dependencies ---"
+          npm install -g @vscode/vsce
           npm install
-          # 创建 .vscodeignore 文件，确保 node_modules 不会被打包进去
           echo "node_modules/" > .vscodeignore
-          echo "Dependencies installed and .vscodeignore created."
+          
+          echo "--- Patching extension ---"
+          # 从 package.json 中动态读取 main 入口文件路径
+          MAIN_JS_PATH=$(jq -r .main package.json)
+          
+          # 健壮性检查：确保路径存在且不为空
+          if [ -z "$MAIN_JS_PATH" ]; then
+            echo "Error: Could not find 'main' entry in package.json."
+            exit 1
+          elif [ ! -f "$MAIN_JS_PATH" ]; then
+            echo "Error: The main file specified in package.json ('$MAIN_JS_PATH') does not exist."
+            exit 1
+          fi
+          
+          echo "Found main entry point at: $MAIN_JS_PATH"
+          
+          # 对找到的入口文件应用补丁
+          mv "$MAIN_JS_PATH" "${MAIN_JS_PATH}.original"
+          cat ../../v2.5-precise-interceptor.js "${MAIN_JS_PATH}.original" > "$MAIN_JS_PATH"
+          echo "Patch applied successfully."
 
-      # 步骤 9: 重新打包成新的 VSIX 文件（使用包含版本号的文件名）
       - name: Repackage Patched VSIX
         if: steps.version_check.outputs.skip_build == 'false'
         id: repackage
@@ -121,14 +116,11 @@ jobs:
           cd unpacked_ext/extension
           vsce package --out ../../${PATCHED_VSIX_NAME}
           echo "Patched VSIX created: ${PATCHED_VSIX_NAME}"
-          ls -l ../../*.vsix
 
-      # 步骤 10: 创建 GitHub Release 并上传打包好的 VSIX
       - name: Create GitHub Release
         if: steps.version_check.outputs.skip_build == 'false'
         uses: softprops/action-gh-release@v2
         with:
-          # 使用插件版本号创建一个唯一的 Git 标签
           tag_name: "v${{ env.VERSION }}-patched"
           name: "Patched Augment v${{ env.VERSION }}"
           body: |
@@ -138,7 +130,6 @@ jobs:
             - Patch Script: v2.5-precise-interceptor.js
             
             Install the `.vsix` file below manually in VS Code.
-          # 将打包好的文件作为附件上传 (使用动态文件名)
           files: "${{ env.PATCHED_VSIX_NAME }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
