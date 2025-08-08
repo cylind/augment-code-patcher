@@ -63,6 +63,7 @@ jobs:
 
       - name: Setup Node.js
         if: steps.version_check.outputs.skip_build == 'false'
+        id: setup_node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -73,8 +74,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node-${{ steps.setup_node.outputs.node-version }}-${{ hashFiles('unpacked_ext/extension/package.json') }}
           restore-keys: |
+            ${{ runner.os }}-node-${{ steps.setup_node.outputs.node-version }}-
             ${{ runner.os }}-node-
 
       # 终极优化：直接从 package.json 读取 main 入口文件并应用补丁
