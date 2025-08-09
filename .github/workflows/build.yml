@@ -1,6 +1,6 @@
 # .github/workflows/build.yml
 
-name: Build Patched Augment Code Extension
+name: Build Augment Extension
 
 on:
   workflow_dispatch:
@@ -8,8 +8,11 @@ on:
     - cron: '0 8 * * *'
   push:
     paths:
-      - 'v2.5-precise-interceptor.js'
+      - '${{ env.INTERCEPTOR_SCRIPT }}'
       - '.github/workflows/**'
+
+env:
+  INTERCEPTOR_SCRIPT: 'augment-interceptor.js'
 
 jobs:
   build-and-release:
@@ -106,7 +109,7 @@ jobs:
           
           # 对找到的入口文件应用补丁（原地替换）
           TEMP_FILE=$(mktemp)
-          cat ../../v2.5-precise-interceptor.js "$MAIN_JS_PATH" > "$TEMP_FILE" && mv "$TEMP_FILE" "$MAIN_JS_PATH"
+          cat ../../${{ env.INTERCEPTOR_SCRIPT }} "$MAIN_JS_PATH" > "$TEMP_FILE" && mv "$TEMP_FILE" "$MAIN_JS_PATH"
           echo "Patch applied successfully (in-place replacement)."
 
       - name: Repackage Patched VSIX
@@ -126,11 +129,11 @@ jobs:
           tag_name: "v${{ env.VERSION }}-patched"
           name: "Patched Augment v${{ env.VERSION }}"
           body: |
-            This is an automated build of the Augment extension, patched with the v2.5 anti-telemetry script.
-            
+            This is an automated build of the Augment extension, patched with the interceptor script.
+
             - Original Extension Version: **${{ env.VERSION }}**
-            - Patch Script: v2.5-precise-interceptor.js
-            
+            - Patch Script: ${{ env.INTERCEPTOR_SCRIPT }}
+
             Install the `.vsix` file below manually in VS Code.
           files: "${{ env.PATCHED_VSIX_NAME }}"
         env:

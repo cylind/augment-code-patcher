@@ -1,137 +1,192 @@
-# Augment Code Patcher - 自动补丁构建器
+# 🛡️ Augment Code Extension 拦截器
 
-## 🚀 这是什么？
+> 指纹浏览器级别的隐私保护解决方案
 
-本项目是一个全自动化的 GitHub Actions 工作流，旨在解决 Augment Code VS Code 插件的隐私和数据收集问题。
+## 🚀 项目简介
 
-它会自动执行以下任务：
-1.  **下载最新版**的官方 Augment Code (`Augment.vscode-augment`) 插件。
-2.  **应用补丁**：将一个强大的去风控脚本 (`v2.5-precise-interceptor.js`, 来源：https://linux.do/t/topic/844851) 注入到插件的核心逻辑中。
-3.  **重新打包**成一个干净、打好补丁的 `.vsix` 文件。
-4.  **自动发布**到本仓库的 [Releases](https://github.com/cylind/augment-code-patcher/releases) 页面，方便你随时下载使用。
+本项目提供了一个全自动化的 GitHub Actions 工作流，旨在解决 Augment Code VS Code 插件的隐私和数据收集问题。
 
-从此，你无需再手动执行繁琐的解包、修改、打包流程，工作流会为你搞定一切！
+### 🎯 功能特性
 
-## ✨ 如何使用
+- ✅ **40+硬件数据点完全伪造** - CPU、内存、主板、BIOS序列号等
+- ✅ **智能网络策略** - 分层决策，精准拦截遥测数据
+- ✅ **SystemInformation库拦截** - 40+方法模拟
+- ✅ **硬件配置模板系统** - Intel/AMD桌面、笔记本真实模板
+- ✅ **文件系统隐私保护** - inode、SSH密钥拦截
+- ✅ **身份信息一致性保证** - 持久化假身份，避免随机变化
 
-使用这个项目非常简单，你只需要从已经构建好的产出物中下载即可：
+### 🔄 自动化构建流程
 
-1.  **前往 Releases 页面**：点击本仓库主页右侧的 [**Releases**](https://github.com/cylind/augment-code-patcher/releases) 链接。
-2.  **下载最新版补丁**: 找到顶部的最新版本（例如 `Patched Augment v0.524.1`），然后下载其附件中的 `.vsix` 文件（例如 `augment.vscode-augment-0.524.1-patched.vsix`）。
-3.  **在 VS Code 中安装**:
-    *   打开 VS Code，进入“扩展”侧边栏 (快捷键 `Ctrl+Shift+X`)。
-    *   点击右上角的 `...` 更多操作菜单。
-    *   选择 **“从 VSIX 安装... (Install from VSIX...)”**。
-    *   选择你刚刚下载的 `.vsix` 文件。
-4.  **完成！** 重启 VS Code 后即可享受一个更纯净、更安全的 Augment Code 体验。
+工作流会自动执行以下任务：
+1. **下载最新版**的官方 Augment Code (`Augment.vscode-augment`) 插件
+2. **应用补丁**：将拦截器 (`augment-interceptor.js`) 注入到插件核心逻辑中
+3. **重新打包**成一个干净、打好补丁的 `.vsix` 文件
+4. **自动发布**到本仓库的 [Releases](https://github.com/cylind/augment-code-patcher/releases) 页面
 
+##  快速开始
 
-## ⚙️ 工作原理 (The Magic Behind)
+### 方法1：下载预构建版本（推荐）
 
-本项目通过一个 GitHub Actions 工作流 (`.github/workflows/build.yml`) 实现完全自动化。其核心步骤如下：
+1. **前往 Releases 页面**：点击本仓库主页右侧的 [**Releases**](https://github.com/cylind/augment-code-patcher/releases) 链接
+2. **下载最新版补丁**: 找到顶部的最新版本，下载 `.vsix` 文件
+3. **在 VS Code 中安装**:
+   - 打开 VS Code，进入"扩展"侧边栏 (`Ctrl+Shift+X`)
+   - 点击右上角的 `...` 更多操作菜单
+   - 选择 **"从 VSIX 安装... (Install from VSIX...)"**
+   - 选择你刚刚下载的 `.vsix` 文件
+4. **完成！** 重启 VS Code 后即可享受隐私保护
 
-- **定时触发与手动触发**: 工作流可以每天自动运行以检查更新，也可以由你手动在 Actions 页面触发。
-- **下载官方插件**: 使用 `curl` 命令从 VS Code Marketplace 的官方 API 下载最新的 `.vsix` 插件包。工作流已正确处理了服务器返回的 `gzip` 压缩，确保获取到原始的 Zip 格式文件。
-- **解包与注入补丁**:
-    1.  使用 `unzip` 命令解压下载的 `original.vsix` 文件。
-    2.  定位到插件的核心脚本（位于 `unpacked_ext/extension/out/extension.js`）。
-    3.  通过 `cat` 命令，将我们的去风控脚本 `v2.5-precise-interceptor.js` 的内容 **完整地添加到** 核心脚本的最前面。
-- **重新安装依赖**: 工作流会进入插件目录，执行 `npm install` 以确保所有依赖都已正确安装。
-- **重新打包**: 使用微软官方的 `vsce` 工具，将修改后的所有文件重新打包成一个全新的、带有版本号的 `.vsix` 文件。
-- **创建 Release**: 最后，工作流会自动创建一个 GitHub Release，将打包好的 `.vsix` 文件作为附件上传，并附上清晰的版本说明。
+### 方法2：手动安装拦截器
 
-## 🛡️ 关于补丁脚本 (`v2.5-precise-interceptor.js`)
+#### 步骤1: 找到Augment Code插件目录
 
-本项目的核心是这个功能强大的拦截脚本（来源：https://linux.do/t/topic/844851 ），它能做到：
+**Windows:**
+```
+C:\Users\{你的用户名}\.vscode\extensions\augment.vscode-augment-*\
+```
 
-- ✅ **VSCode版本伪造**: 深度拦截 `vscode.version` 和 `env` 对象，伪造版本号、会话ID、机器ID等。
-- ✅ **网络请求拦截**: 在应用层拦截 `fetch`, `XMLHttpRequest` 等，智能区分“代码索引”等核心功能和“遥测上报”等数据收集行为。
-- ✅ **系统信息伪造**: 拦截操作系统、CPU架构、内核版本等信息的获取，并返回逼真的假数据。
-- ✅ **数据收集拦截**: 精准拦截 Analytics、Segment 等数据分析服务的上报函数。
-- ✅ **Git 信息保护**: 拦截 `git` 命令和用户信息的获取。
+**macOS/Linux:**
+```
+~/.vscode/extensions/augment.vscode-augment-*/
+```
 
-**安全声明**: 该脚本经过了详细的代码审查，**未发现任何后门、恶意行为或将你的信息发送给第三方的逻辑**。它的所有行为都与其声明的“去风控”目标一致，你可以放心使用。
+#### 步骤2: 复制拦截器文件
+
+将 `augment-interceptor.js` 复制到插件目录中。
+
+#### 步骤3: 注入拦截器代码
+
+找到插件的主入口文件（通常是 `out/extension.js`），在文件**最开头**添加：
+
+```javascript
+try {
+    require('./augment-interceptor.js');
+    console.log('✅ Augment Code 拦截器已启动');
+} catch (error) {
+    console.error('❌ 拦截器加载失败:', error.message);
+}
+```
+
+#### 步骤4: 重启VSCode
+
+重启VSCode后，应该看到拦截器启动信息：
+
+```
+🚀 正在加载 Augment Code Extension 拦截器 v3.6...
+✅ 拦截器初始化完成
+🛡️ Augment Code Extension 拦截器 v3.6
+状态: running
+身份ID: 6beca83f...
+硬件模板: intel_desktop
+主机名: DESKTOP-2e872b50
+用户名: user-2e81352d
+🚀 隐私保护功能已激活！
+```
 
 ## 🔍 验证安装
 
-安装完成后，验证拦截器是否正常工作：
+### 查看拦截器日志
 
-1. **打开开发者控制台**
-   - 按 `Ctrl+Shift+I` (Windows/Linux) 或 `Cmd+Option+I` (Mac)
-   - 点击 "Console" 标签
+重启VSCode后，按 `Ctrl+Shift+I` 打开开发者工具，在Console中查看是否有拦截器启动日志：
 
-2. **查看初始化日志**
-   应该能看到类似以下的日志：
-   ```
-   [AugmentCode拦截器] 正在加载安全拦截器 v2.5 (精确拦截版)...
-   [AugmentCode拦截器] 🚀 开始初始化 v2.5 精确拦截器...
-   [AugmentCode拦截器] ✅ v2.5 精确拦截器初始化完成！
-   ```
-
-3. **测试基本功能**
-   - 尝试使用 Augment 的代码补全功能
-   - 检查是否有拦截日志出现
-
-## ⚙️ 配置拦截器
-
-### 基本配置
-
-在开发者控制台中，您可以调整拦截器的行为：
-
-```javascript
-// 查看当前配置
-console.log(INTERCEPTOR_CONFIG);
-
-// 启用详细日志
-INTERCEPTOR_CONFIG.network.logAllRequests = true;
-INTERCEPTOR_CONFIG.network.logInterceptedRequests = true;
-INTERCEPTOR_CONFIG.network.logAllowedRequests = true;
-
-// 调整日志详细程度
-INTERCEPTOR_CONFIG.network.requestLogLimit = 5000; // 增加日志字符限制
+```
+[Extension Host] 🚀 正在加载 Augment Code Extension 拦截器 v3.6...
+[Extension Host] ✅ 拦截器初始化完成
+[Extension Host] 🛡️ Augment Code Extension 拦截器 v3.6
 ```
 
-### 高级配置
+### 观察拦截日志
 
-```javascript
-// 数据保护设置
-INTERCEPTOR_CONFIG.dataProtection.enableAnalyticsBlocking = true;  // 阻止分析数据
-INTERCEPTOR_CONFIG.dataProtection.enableGitProtection = true;      // 保护Git信息
-INTERCEPTOR_CONFIG.dataProtection.enableSessionIdReplacement = true; // 替换会话ID
+使用Augment Code功能时，应该能看到拦截日志：
 
-// 网络拦截设置
-INTERCEPTOR_CONFIG.network.enableHttpInterception = true;   // HTTP拦截
-INTERCEPTOR_CONFIG.network.enableFetchInterception = true;  // Fetch拦截
-INTERCEPTOR_CONFIG.network.enableXhrInterception = true;    // XHR拦截
+```
+[Extension Host] ✅ [网络拦截] POST https://api.augmentcode.com/... - 必要功能已放行
+[Extension Host] 🚫 [网络拦截] POST https://api.segment.io/... - 遥测数据已拦截
+[Extension Host] 🔄 [OS拦截] hostname() 调用已拦截 - 伪造: DESKTOP-abc123
 ```
 
-## 📊 监控拦截活动
+## 🔄 重置身份
 
-### 查看实时日志
+### 简单重置方法
 
-在控制台中监控拦截活动：
+拦截器的身份配置保存在文件中，删除配置文件即可重置身份：
 
-```javascript
-// 查看拦截统计
-PreciseEventReporterInterceptor.getInterceptionStats();
+**配置文件位置：**
+- Windows: `C:\Users\{用户名}\.augment-interceptor\identity-profile.json`
+- macOS/Linux: `~/.augment-interceptor/identity-profile.json`
 
-// 查看网络拦截统计
-NetworkInterceptor.getInterceptionStats();
+**重置步骤：**
+1. 关闭VSCode
+2. 删除配置文件
+3. 重启VSCode（将自动生成新身份）
 
-// 查看系统信息访问统计
-console.log(INTERCEPTOR_CONFIG.systemAccessCount);
-console.log(INTERCEPTOR_CONFIG.vscodeEnvAccessCount);
+**快速重置命令：**
+```bash
+# Windows
+del "C:\Users\%USERNAME%\.augment-interceptor\identity-profile.json"
+
+# macOS/Linux
+rm ~/.augment-interceptor/identity-profile.json
 ```
 
-### 常见日志类型
+## 🔧 工作原理
 
-- `🚫 拦截遥测端点` - 成功阻止了遥测数据发送
-- `✅ 允许代码索引数据` - 允许了必要的代码功能
-- `🎭 拦截 enableUpload() 调用` - 阻止了数据上传方法
-- `🖥️ 已生成假系统信息` - 成功伪造了系统信息
+### 硬件模板系统
+
+拦截器会自动选择以下硬件模板之一：
+
+1. **Intel桌面** - i7-10700K + 16GB + ASUS PRIME Z490-A
+2. **AMD桌面** - Ryzen 7 5800X + 32GB + ASUS ROG STRIX B550-F
+3. **Intel笔记本** - i7-1165G7 + 16GB + ThinkPad X1 Carbon
+
+### 智能网络策略
+
+- **INTERCEPT** - 完全拦截遥测数据（Segment.io、Analytics等）
+- **REPLACE_IDENTITY** - 替换身份信息后放行（认证、设备验证等）
+- **ALLOW** - 直接放行（必要功能、API调用等）
+
+### 身份一致性保证
+
+- 身份信息持久化保存在配置文件中
+- 每次启动使用相同的假身份，避免随机变化
+- 所有硬件信息逻辑一致，无法通过交叉验证识别
+
+## ⚠️ 注意事项
+
+### 重要提醒
+
+1. **插件更新** - Augment Code插件更新时需要重新注入拦截器代码
+2. **配置文件** - 身份配置保存在 `~/.augment-interceptor/identity-profile.json`
+3. **重置身份** - 删除配置文件即可重置身份
+
+### 故障排除
+
+**拦截器未启动：**
+- 检查文件路径是否正确
+- 确保在插件代码最开头加载
+- 查看VSCode开发者控制台的错误信息
+
+**身份重置：**
+- 删除配置文件：`~/.augment-interceptor/identity-profile.json`
+- 重启VSCode自动生成新身份
+
+**功能验证：**
+- 查看开发者控制台中的拦截日志
+- 观察网络请求是否被正确分类处理
+
+## 🎉 享受安全的编程体验！
+
+安装完成后，你可以：
+
+- ✅ 安全使用Augment Code的所有功能
+- ✅ 完全保护个人隐私和系统信息  
+- ✅ 享受指纹浏览器级别的隐私保护
+- ✅ 避免账号封禁和身份追踪
+
+拦截器会自动工作，无需额外配置。如有问题，请查看开发者控制台的详细日志信息。
 
 ## ⚠️ 免责声明
 
-- 本项目提供的 `.vsix` 文件是基于官方插件修改的 **非官方构建版本**。
-- 本项目仅用于技术学习和研究，旨在提高用户对个人数据和隐私的控制能力。
-- 请自行承担使用本项目产出的插件可能带来的任何风险。
+- 本项目提供的 `.vsix` 文件是基于官方插件修改的 **非官方构建版本**
+- 本项目仅用于技术学习和研究，旨在提高用户对个人数据和隐私的控制能力
+- 请自行承担使用本项目产出的插件可能带来的任何风险
