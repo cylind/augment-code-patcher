@@ -8,7 +8,6 @@ on:
     - cron: '0 8 * * *'
   push:
     paths:
-      - '${{ env.INTERCEPTOR_SCRIPT }}'
       - '.github/workflows/**'
 
 env:
