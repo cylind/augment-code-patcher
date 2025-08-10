@@ -16,119 +16,38 @@
 (function() {
     'use strict';
 
-    console.log('🚀 正在加载 Augment Code Extension 完整拦截器 v3.6...');
+    console.log('🚀 正在加载 Augment Code Extension 完整拦截器 v3.7...');
 
-    // ==================== 1. 硬件配置模板 ====================
+    // ==================== 1. 硬件配置模板加载 ====================
+    let HARDWARE_TEMPLATES = {};
+    try {
+        const fs = require('fs');
+        const path = require('path');
 
-    const HARDWARE_TEMPLATES = {
-        intel_desktop: {
-            cpu: {
-                manufacturer: 'Intel',
-                brand: 'Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz',
-                family: '6', model: '165', stepping: '5',
-                voltage: '1.2', speed: 3.8, speedMin: 0.8, speedMax: 5.1,
-                cores: 8, physicalCores: 8, processors: 1, socket: 'LGA1200',
-                flags: 'fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb invpcid_single ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow vnmi flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp md_clear flush_l1d arch_capabilities'
-            },
-            bios: {
-                vendor: 'American Megatrends Inc.',
-                version: '2.70',
-                releaseDate: '2021-04-14',
-                revision: '5.17'
-            },
-            baseboard: {
-                manufacturer: 'ASUSTeK COMPUTER INC.',
-                model: 'PRIME Z490-A',
-                version: 'Rev 1.xx',
-                assetTag: 'Default string'
-            },
-            chassis: {
-                manufacturer: 'Default string',
-                model: 'Default string',
-                type: 'Desktop',
-                version: 'Default string',
-                assetTag: 'Default string'
-            },
-            memory: {
-                total: 17179869184, // 16GB
-                modules: [
-                    { size: 8589934592, type: 'DDR4', clockSpeed: 3200, manufacturer: 'Corsair' },
-                    { size: 8589934592, type: 'DDR4', clockSpeed: 3200, manufacturer: 'Corsair' }
-                ]
-            }
-        },
-        amd_desktop: {
-            cpu: {
-                manufacturer: 'AMD',
-                brand: 'AMD Ryzen 7 5800X 8-Core Processor',
-                family: '25', model: '33', stepping: '0',
-                voltage: '1.35', speed: 3.8, speedMin: 2.2, speedMax: 4.7,
-                cores: 8, physicalCores: 8, processors: 1, socket: 'AM4',
-                flags: 'fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibrs ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 erms invpcid cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip pku ospke vaes vpclmulqdq rdpid overflow_recov succor smca fsrm'
-            },
-            bios: {
-                vendor: 'American Megatrends Inc.',
-                version: '4.40',
-                releaseDate: '2022-03-15',
-                revision: '5.19'
-            },
-            baseboard: {
-                manufacturer: 'ASUSTeK COMPUTER INC.',
-                model: 'ROG STRIX B550-F GAMING',
-                version: 'Rev 1.xx',
-                assetTag: 'Default string'
-            },
-            chassis: {
-                manufacturer: 'Default string',
-                model: 'Default string',
-                type: 'Desktop',
-                version: 'Default string',
-                assetTag: 'Default string'
-            },
-            memory: {
-                total: 34359738368, // 32GB
-                modules: [
-                    { size: 17179869184, type: 'DDR4', clockSpeed: 3600, manufacturer: 'G.Skill' },
-                    { size: 17179869184, type: 'DDR4', clockSpeed: 3600, manufacturer: 'G.Skill' }
-                ]
-            }
-        },
-        intel_laptop: {
-            cpu: {
-                manufacturer: 'Intel',
-                brand: 'Intel(R) Core(TM) i7-1165G7 @ 2.80GHz',
-                family: '6', model: '140', stepping: '1',
-                voltage: '0.9', speed: 2.8, speedMin: 0.4, speedMax: 4.7,
-                cores: 4, physicalCores: 4, processors: 1, socket: 'BGA1449',
-                flags: 'fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf tsc_known_freq pni pclmulqdq dtes64 monitor ds_cpl vmx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb cat_l2 invpcid_single cdp_l2 ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow vnmi flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid rdt_a avx512f avx512dq rdseed adx smap avx512ifma clflushopt intel_pt avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves split_lock_detect dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp hwp_pkg_req avx512vbmi umip pku ospke avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq rdpid movdiri movdir64b fsrm avx512_vp2intersect md_clear ibt flush_l1d arch_capabilities'
-            },
-            bios: {
-                vendor: 'LENOVO',
-                version: '1.45',
-                releaseDate: '2022-08-10',
-                revision: '1.45'
-            },
-            baseboard: {
-                manufacturer: 'LENOVO',
-                model: '20U7CTO1WW',
-                version: 'SDK0J40697 WIN',
-                assetTag: 'Not Available'
-            },
-            chassis: {
-                manufacturer: 'LENOVO',
-                model: '20U7CTO1WW',
-                type: 'Notebook',
-                version: 'ThinkPad X1 Carbon Gen 9',
-                assetTag: 'Not Available'
-            },
-            memory: {
-                total: 17179869184, // 16GB
-                modules: [
-                    { size: 17179869184, type: 'LPDDR4X', clockSpeed: 4266, manufacturer: 'Samsung' }
-                ]
-            }
+        // 在 VS Code 扩展上下文中，__dirname 指向包含当前脚本的目录 (如 '.../extension/out')
+        // 我们假设 hardware-templates.json 被复制到了扩展的根目录 (如 '.../extension')
+        const templatesPath = path.join(__dirname, '..', 'hardware-templates.json');
+
+        if (fs.existsSync(templatesPath)) {
+            const templatesJson = fs.readFileSync(templatesPath, 'utf8');
+            HARDWARE_TEMPLATES = JSON.parse(templatesJson);
+            console.log('✅ 硬件模板加载成功 from', templatesPath);
+        } else {
+            console.error('❌ 错误: hardware-templates.json 未找到 at', templatesPath);
+            // 提供一个最小化的默认模板以避免崩溃
+            HARDWARE_TEMPLATES = {
+                fallback: {
+                    cpu: { manufacturer: 'Intel', brand: 'Core i5', cores: 4, physicalCores: 4, speed: 2.5 },
+                    bios: { vendor: 'Default BIOS Vendor' },
+                    baseboard: { manufacturer: 'Default Board Manufacturer' },
+                    chassis: { type: 'Desktop' },
+                    memory: { total: 8589934592, modules: [{ size: 8589934592, type: 'DDR4' }] }
+                }
+            };
         }
-    };
+    } catch (error) {
+        console.error('❌ 加载硬件模板失败:', error.message);
+    }
 
     // ==================== 2. 身份配置文件管理器 ====================
 

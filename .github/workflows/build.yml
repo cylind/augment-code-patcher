@@ -111,6 +111,12 @@ jobs:
           cat ../../${{ env.INTERCEPTOR_SCRIPT }} "$MAIN_JS_PATH" > "$TEMP_FILE" && mv "$TEMP_FILE" "$MAIN_JS_PATH"
           echo "Patch applied successfully (in-place replacement)."
 
+      - name: Copy templates file
+        if: steps.version_check.outputs.skip_build == 'false'
+        run: |
+          cp hardware-templates.json unpacked_ext/extension/hardware-templates.json
+          echo "Copied hardware-templates.json into the extension package."
+
       - name: Repackage Patched VSIX
         if: steps.version_check.outputs.skip_build == 'false'
         id: repackage
